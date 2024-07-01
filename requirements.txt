@@ -1,0 +1,8 @@
+textblob 
+plotly
+streamlit
+pandas
+numpy
+sqlite3
+datetime
+base64

@@ -137,7 +137,7 @@ def calculate_cinematic_quotient(movie):
 # Streamlit app
 st.set_page_config(page_title="Cinematic Vault: A Movie List Application", layout="wide")
 
-st.title("🎬 Cinematic Vault: A Treasure Trove of Global Cinema")
+st.title("🎬 Cinematic Vault: A Movie List Application")
 
 # Sidebar navigation
 page = st.sidebar.selectbox("Navigate", ["Home", "Add Cinematic Gem", "Discover Treasures", "Update Cinematic Gem", "Remove from Vault", "Cinematic Analysis"])

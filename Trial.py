@@ -44,14 +44,32 @@ def add_cinematic_gem(title, director, release_year, language, rating, genre, ru
 def get_all_cinematic_treasures():
     return pd.read_sql_query("SELECT * FROM cinematic_treasures", conn)
 
-def update_cinematic_gem(id, title, director, release_year, language, rating, genre, runtime, box_office, awards, cinematographer, soundtrack_composer, critical_reception, user_reviews, cultural_impact, trivia):
-    c.execute("UPDATE cinematic_treasures SET title=?, director=?, release_year=?, language=?, rating=?, genre=?, runtime=?, box_office=?, awards=?, cinematographer=?, soundtrack_composer=?, critical_reception=?, user_reviews=?, cultural_impact=?, trivia=? WHERE id=?",
-              (title, director, release_year, language, rating, genre, runtime, box_office, awards, cinematographer, soundtrack_composer, critical_reception, user_reviews, cultural_impact, trivia, id))
+def delete_cinematic_gem(title):
+    c.execute("DELETE FROM cinematic_treasures WHERE title=?", (title,))
     conn.commit()
+    # Verify deletion
+    c.execute("SELECT * FROM cinematic_treasures WHERE title=?", (title,))
+    if c.fetchone() is None:
+        return True
+    else:
+        return False
 
-def delete_cinematic_gem(id):
-    c.execute("DELETE FROM cinematic_treasures WHERE id=?", (id,))
+def update_cinematic_gem(id, title, director, release_year, language, rating, genre, runtime, box_office, awards, cinematographer, soundtrack_composer, critical_reception, user_reviews, cultural_impact, trivia):
+    c.execute("""UPDATE cinematic_treasures 
+                 SET director=?, release_year=?, language=?, rating=?, genre=?, runtime=?, box_office=?, 
+                     awards=?, cinematographer=?, soundtrack_composer=?, critical_reception=?, user_reviews=?, 
+                     cultural_impact=?, trivia=? 
+                 WHERE title=?""",
+              (director, release_year, language, rating, genre, runtime, box_office, awards, cinematographer, 
+               soundtrack_composer, critical_reception, user_reviews, cultural_impact, trivia, title))
     conn.commit()
+    # Verify update
+    c.execute("SELECT * FROM cinematic_treasures WHERE title=?", (title,))
+    updated_row = c.fetchone()
+    if updated_row:
+        return True
+    else:
+        return False
 
 def filter_cinematic_treasures(criteria, value):
     if criteria in ['release_year', 'rating', 'runtime', 'box_office', 'critical_reception']:
@@ -167,7 +185,7 @@ elif page == "Add Cinematic Gem":
     rating = st.slider("Rating", 0.0, 10.0, 5.0, 0.1)
     genre = st.text_input("Genre")
     runtime = st.number_input("Runtime (minutes)", min_value=1, step=1)
-    box_office = st.number_input("Box Office (million $)", min_value=0.0, step=0.1)
+    box_office = st.number_input("Box Office (in $)", min_value=0.0, step=1.0)
     awards = st.text_input("Awards")
     cinematographer = st.text_input("Cinematographer")
     soundtrack_composer = st.text_input("Soundtrack Composer")
@@ -182,7 +200,7 @@ elif page == "Add Cinematic Gem":
 
 elif page == "Discover Treasures":
     st.header("🔍 Discover Cinematic Treasures")
-    filter_option = st.selectbox("Filter by", ["Title", "Director", "Release Year", "Language", "Rating", "Genre", "Awards", "Cinematographer", "Soundtrack Composer"])
+    filter_option = st.selectbox("Filter by",["Title", "Director", "Release Year", "Language", "Rating", "Genre", "Awards", "Cinematographer", "Soundtrack Composer"])
     filter_value = st.text_input("Enter filter value")
 
     if st.button("Unearth Treasures"):
@@ -202,7 +220,6 @@ elif page == "Update Cinematic Gem":
     movies = get_all_cinematic_treasures()
     movie_to_update = st.selectbox("Select Cinematic Gem to Update", movies['title'])
     movie_data = movies[movies['title'] == movie_to_update].iloc[0]
-
     title = st.text_input("Title", movie_data['title'])
     director = st.text_input("Director", movie_data['director'])
     release_year = st.number_input("Release Year", min_value=1800, max_value=datetime.now().year, step=1, value=movie_data['release_year'])
@@ -210,7 +227,7 @@ elif page == "Update Cinematic Gem":
     rating = st.slider("Rating", 0.0, 10.0, float(movie_data['rating']), 0.1)
     genre = st.text_input("Genre", movie_data['genre'])
     runtime = st.number_input("Runtime (minutes)", min_value=1, step=1, value=movie_data['runtime'])
-    box_office = st.number_input("Box Office (million $)", min_value=0.0, step=0.1, value=movie_data['box_office'])
+    box_office = st.number_input("Box Office (in $)", min_value=0.0, step=1.0, value=movie_data['box_office'])
     awards = st.text_input("Awards", movie_data['awards'])
     cinematographer = st.text_input("Cinematographer", movie_data['cinematographer'])
     soundtrack_composer = st.text_input("Soundtrack Composer", movie_data['soundtrack_composer'])
@@ -221,17 +238,31 @@ elif page == "Update Cinematic Gem":
 
     if st.button("Update Cinematic Gem"):
         update_cinematic_gem(movie_data['id'], title, director, release_year, language, rating, genre, runtime, box_office, awards, cinematographer, soundtrack_composer, critical_reception, user_reviews, cultural_impact, trivia)
-        st.success("Cinematic gem updated successfully!")
+        st.success(f"Cinematic gem '{title}' updated successfully!")
+        
+        # Refresh the movies dataframe to show the updated data
+        updated_movies = get_all_cinematic_treasures()
+        st.dataframe(updated_movies)
 
+    # Display current data for reference
+    st.subheader("Current Data")
+    st.dataframe(movie_data)
 elif page == "Remove from Vault":
     st.header("🗑️ Remove Cinematic Gem from Vault")
     movies = get_all_cinematic_treasures()
     movie_to_delete = st.selectbox("Select Cinematic Gem to Remove", movies['title'])
 
     if st.button("Remove from Vault"):
-        movie_id = movies[movies['title'] == movie_to_delete]['id'].iloc[0]
-        delete_cinematic_gem(movie_id)
-        st.success("Cinematic gem removed from the vault!")
+        delete_success = delete_cinematic_gem(movie_to_delete)
+        if delete_success:
+            st.success(f"Cinematic gem '{movie_to_delete}' removed from the vault!")
+        else:
+            st.error(f"Failed to remove cinematic gem '{movie_to_delete}' from the vault.")
+        
+        # Refresh the movies dataframe to show the updated list
+        movies = get_all_cinematic_treasures()
+        st.dataframe(movies)
+
 
 elif page == "Cinematic Analysis":
     st.header("📊 Cinematic Analysis")
@@ -267,3 +298,4 @@ elif page == "Cinematic Analysis":
 
 # Close the database connection when the app is done
 conn.close()
+
